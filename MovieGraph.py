@@ -94,9 +94,9 @@ def getLargeComponents(minsize, graph):
     return largecomps
 
 ###Trimming dead-end chains/trees###
-def hasDeadEnds(g):
-    return not all((len(g[k]) > 0 for k in g))
 def trim(graph):
+    def hasDeadEnds(g):
+        return not all((len(g[k]) > 0 for k in g))
     leafChains = {k: [] for k in graph}
     while hasDeadEnds(graph):
         newg = {}
@@ -139,6 +139,7 @@ class graph:
     def nodes(self):
         return self.g.keys()
     def neighbors(self, n):
+        if not n in self.g: return []
         return self.g[n]
     def vWeight(self, n):
         return self.vWeights.get(n, 0)
@@ -162,6 +163,30 @@ class graph:
         g.chains = {v: self.chains[v] for v in g.nodes()}
         g.vWeights = {v: self.vWeights[v] for v in g.nodes()}
         return g
+    
+    def subGraphExclude(self, node, excludes):
+        ans = set(excludes)
+        F = {node}
+        while len(F) > 0:
+            Fp = set()
+            for v in F: 
+                if v not in ans:
+                    ans.add(v)
+                    Fp = Fp | set(self.g[v])
+            F = Fp
+        return len(ans) - len(excludes)
+    
+    def subGraphSize(self, node):
+        ans = set()
+        F = {node}
+        while len(F) > 0:
+            Fp = set()
+            for v in F: 
+                if v not in ans:
+                    ans.add(v)
+                    Fp = Fp | set(self.g[v])
+            F = Fp
+        return len(ans)
         
     def pathLen(self, p):
         if len(p) == 0: return 0
@@ -190,11 +215,12 @@ class collapsedGraph(graph):
             self.eWeights = dict(g.eWeights)
             self.vWeights = dict(g.vWeights)
             self.g = dict(g.g)
-        else: self.source = g if isinstance(g, graph) else graph(g)
-        (self.wg, self.chains, self.innerChains) = collapse(self.source.g, self.source.chains)
-        self.eWeights = {(k,b):w for k,v in self.wg.items() for (b,w) in v}
-        self.vWeights = {k:len(v) for k,v in self.chains.items()}
-        self.g = {k: [c for c,_ in v] for k,v in self.wg.items()}
+        else:
+            self.source = g if isinstance(g, graph) else graph(g)
+            (self.wg, self.chains, self.innerChains) = collapse(self.source.g, self.source.chains)
+            self.eWeights = {(k,b):w for k,v in self.wg.items() for (b,w) in v}
+            self.vWeights = {k:len(v) for k,v in self.chains.items()}
+            self.g = {k: [c for c,_ in v] for k,v in self.wg.items()}
         
     def __repr__(self):
         return "<collapsedGraph: " + str(len(self)) + " nodes>"
@@ -227,4 +253,4 @@ class collapsedGraph(graph):
             newl = [node] + l[:l.index(node)]
             return (newl, self.pathLen(newl))
         
-g = graph(readGraph("graphMainComponent.txt"))
+g = graph(readGraph("graphMainComponent2.txt"))

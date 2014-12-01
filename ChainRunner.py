@@ -1,4 +1,3 @@
-from blist import sortedlist
 import random
 import sys
 from MovieGraph import *
@@ -23,7 +22,7 @@ def pathToString(path, moviefile):
     for i in path[1:]:
         over = overlapCount(prev, namelist[i])
         if over == 0: 
-            print "ERROR: No overlap between titles"
+            print "ERROR: No overlap between titles",prev,namelist[i]
             return ""
         result += " " + string.join(string.split(namelist[i])[over:])
         prev = namelist[i]
@@ -79,43 +78,65 @@ def searchAll(graph):
 ###Takes which node to update, the graph, the current paths dict, 
 ###and the dict representing how long each vert has gone without updating
 ###returns the (path, len) pair for the new best path from this vert
-def updatePaths(node, g, paths, idleCounts):
+def updatePaths(node, g, paths, idleCounts, allPaths):
     mypaths = paths[node]
-    oldLens = [x for (_,x) in mypaths]
+    oldLens = {x for (_,x) in mypaths}
     refresh = idleCounts[node] > 30
-    if refresh: mypaths = sortedlist([([node], g.vWeight(node) + 1)], key = lambda (l,x): x)
+    if refresh: mypaths = [([node], g.vWeight(node) + 1)]
     for child in g.neighbors(node):
         if idleCounts[child] <= 1 or refresh:
             for path in paths[child]:
-                mypaths.add(g.prepend(node, path))
+                mypaths.append(g.prepend(node, path))
     
-    paths[node] = mypaths[-10:]
-    if [x for (_,x) in paths[node]] == oldLens: idleCounts[node] += 1
+    mypathsNoDup = []
+    for x in mypaths:
+        if not x in mypathsNoDup:
+            mypathsNoDup.append(x)
+            #allPaths[node].add(tuple(x[0]))
+    mypathsNoDup.sort(key = lambda (l,x):x)
+    
+    paths[node] = mypathsNoDup[-10:]
+    if {x for (_,x) in paths[node]} == oldLens: idleCounts[node] += 1
     else: idleCounts[node] = 0
     return mypaths[-1]
     
 ###Takes a graph object, does the search and returns a dict (vert -> (path, len) list)
 ###vert maps to a list of the longest paths from the vert, paired with their lengths
-def findPaths(g):
+def findPaths(g, allPaths = None):
+    if allPaths == None: allPaths = {n: set() for n in g.nodes()}
     bestp, blen = [], 0
-    paths = {n: sortedlist([([n], g.vWeight(n) + 1)], key = lambda (l,x): x) for n in g.nodes()}
+    paths = {n: [([n], g.vWeight(n) + 1)] for n in g.nodes()}
     idleCounts = {n:0 for n in g.nodes()}
     changesMade = 1
     keys = g.nodes()
-    while changesMade > 0:
-        random.shuffle(keys)
-        changesMade = 0
-        a = False
-        for n in keys:
-            result = updatePaths(n, g, paths, idleCounts)
-            if result[1] > blen: (bestp, blen) = result
-            if idleCounts[n] == 0: changesMade += 1
-            a = True
-            
-        if a:
-            print bestp, blen
-        print "updated", changesMade, "nodes, max len", blen, "          \r",
-        sys.stdout.flush()
+    try:
+        while changesMade > 0:
+            random.shuffle(keys)
+            changesMade = 0
+            a = False
+            for n in keys:
+                result = updatePaths(n, g, paths, idleCounts, allPaths)
+                if result[1] > blen:
+                    (bestp, blen) = result
+                    a = True
+                if idleCounts[n] == 0: changesMade += 1
+                
+            if a:
+                print bestp, blen
+            print "updated", changesMade, "nodes, max len", blen, "          \r",
+            sys.stdout.flush()
+    except KeyboardInterrupt:
+        print "done, longest path:", blen, "        "
+        print bestp
+        return (paths, allPaths)
     print "done, longest path:", blen, "        "
     print bestp
-    return paths
+    return (paths, allPaths)
+
+def writePaths(paths):
+    f = open('somanypaths.txt', 'w')
+    f.write('{\n')
+    for n in paths:
+        f.write(str(n) + ': ' + str(paths[n]) + '\n')
+    f.write('}')
+    f.close()

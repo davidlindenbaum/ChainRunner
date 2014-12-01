@@ -8,7 +8,8 @@ def pathToString(path, moviefile):
         atoks = string.split(a, " ")
         btoks = string.split(b, " ")
         for i in xrange(1, len(atoks) + 1):
-            if i <= len(btoks) and atoks[-i:] == btoks[0:i]: return i
+            for j in xrange(max(1, i-2), min(i+2, len(btoks)) + 1):
+                if string.join(atoks[-i:],'') == string.join(btoks[0:j],''): return j
         return 0
     if len(path) != len(set(path)):
         print "ERROR: Path contains duplicates"

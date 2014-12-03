@@ -82,7 +82,7 @@ def searchAll(graph):
 def updatePaths(node, g, paths, idleCounts, allPaths):
     mypaths = paths[node]
     oldLens = {x for (_,x) in mypaths}
-    refresh = idleCounts[node] > 30
+    refresh = idleCounts[node] > 10
     if refresh: mypaths = [([node], g.vWeight(node) + 1)]
     for child in g.neighbors(node):
         if idleCounts[child] <= 1 or refresh:
@@ -96,10 +96,10 @@ def updatePaths(node, g, paths, idleCounts, allPaths):
             #allPaths[node].add(tuple(x[0]))
     mypathsNoDup.sort(key = lambda (l,x):x)
     
-    paths[node] = mypathsNoDup[-10:]
+    paths[node] = mypathsNoDup[-12:]
     if {x for (_,x) in paths[node]} == oldLens: idleCounts[node] += 1
     else: idleCounts[node] = 0
-    return mypaths[-1]
+    return mypathsNoDup[-1]
     
 ###Takes a graph object, does the search and returns a dict (vert -> (path, len) list)
 ###vert maps to a list of the longest paths from the vert, paired with their lengths

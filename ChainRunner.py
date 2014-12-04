@@ -75,6 +75,9 @@ def searchAll(graph):
     return maxpath
 
 
+idleLimit = 30
+chainCount = 10
+
 ###Search algorithm 2###
 ###Takes which node to update, the graph, the current paths dict, 
 ###and the dict representing how long each vert has gone without updating
@@ -82,7 +85,7 @@ def searchAll(graph):
 def updatePaths(node, g, paths, idleCounts, allPaths):
     mypaths = paths[node]
     oldLens = {x for (_,x) in mypaths}
-    refresh = idleCounts[node] > 10
+    refresh = idleCounts[node] > idleLimit
     if refresh: mypaths = [([node], g.vWeight(node) + 1)]
     for child in g.neighbors(node):
         if idleCounts[child] <= 1 or refresh:
@@ -96,7 +99,7 @@ def updatePaths(node, g, paths, idleCounts, allPaths):
             #allPaths[node].add(tuple(x[0]))
     mypathsNoDup.sort(key = lambda (l,x):x)
     
-    paths[node] = mypathsNoDup[-12:]
+    paths[node] = mypathsNoDup[-chainCount:]
     if {x for (_,x) in paths[node]} == oldLens: idleCounts[node] += 1
     else: idleCounts[node] = 0
     return mypathsNoDup[-1]
@@ -109,30 +112,36 @@ def findPaths(g, allPaths = None):
     paths = {n: [([n], g.vWeight(n) + 1)] for n in g.nodes()}
     idleCounts = {n:0 for n in g.nodes()}
     changesMade = 1
+    refreshes = 0
     keys = g.nodes()
     try:
-        while changesMade > 0:
+        while changesMade > 0 or True:
             random.shuffle(keys)
             changesMade = 0
+            refreshes = 0
             a = False
             for n in keys:
+                refreshed = False
+                if idleCounts[n] > idleLimit:
+                    refreshed = True
+                    refreshes += 1
                 result = updatePaths(n, g, paths, idleCounts, allPaths)
                 if result[1] > blen:
                     (bestp, blen) = result
                     a = True
-                if idleCounts[n] == 0: changesMade += 1
+                if idleCounts[n] == 0 and not refreshed: changesMade += 1
                 
             if a:
                 print bestp, blen
-            print "updated", changesMade, "nodes, max len", blen, "          \r",
+            print "updated", changesMade, "nodes, refreshed ",refreshes,", max len", blen, "          \r",
             sys.stdout.flush()
     except KeyboardInterrupt:
-        print "done, longest path:", blen, "        "
+        print "done, longest path:", blen, "                                    "
         print bestp
-        return (paths, allPaths)
-    print "done, longest path:", blen, "        "
+        return bestp#(paths, allPaths)
+    print "done, longest path:", blen, "                                    "
     print bestp
-    return (paths, allPaths)
+    return bestp#(paths, allPaths)
 
 def writePaths(paths):
     f = open('somanypaths.txt', 'w')

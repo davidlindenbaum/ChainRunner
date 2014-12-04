@@ -15,6 +15,9 @@ def findNewChain(start, ends, skip, chain, g, allowEnd, margin, maxdepth):
         if ind >= 0 and ind < depth:
             p = chain + ends[ind:]
             if len(p) > len(best) and len(set(p)) == len(p): best = p
+        if ind == -1 and allowEnd and depth > len(ends):
+            p = chain
+            if len(p) > len(best) and len(set(p)) == len(p): best = p
             
         p = findNewChain(next, ends, skip, list(chain), g, allowEnd, margin, maxdepth)
         if len(p) > len(best): best = p
@@ -25,16 +28,18 @@ def expandChain(chain, g, margin, maxdepth):
     origlen = len(chain)
     skip = set(chain)
     
-    for i in range(len(chain)):
+    i = 0
+    while i < len(chain):
         print i+1,"of",len(chain)
         next = chain[i:i+margin+1]
-        r = findNewChain(chain[i], next, skip, [], g, False, margin, maxdepth)
+        r = findNewChain(chain[i], next, skip, [], g, i > len(chain) - margin, margin, maxdepth)
 
         if len(r) > len(next):
             skip -= set(next)
             skip |= set(r)
             chain[i:i+margin+1] = r
             print chain, len(chain)
+        i += 1
             
     if len(chain) > origlen:
         print len(chain)
